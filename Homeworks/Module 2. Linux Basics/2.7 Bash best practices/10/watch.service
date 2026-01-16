@@ -1,0 +1,9 @@
+[Unit]
+Description=Cahching script
+After=network.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/vaclav
+ExecStart=/home/vaclav/script.sh
+Environment="PATH=/usr/bin:/bin"
