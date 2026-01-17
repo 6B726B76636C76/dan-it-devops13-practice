@@ -1,0 +1,16 @@
+The script starts with the shebang line (#!/bin/bash) to specify the interpreter.
+The source_dir variable is set to the source directory you want to back up.
+The backup_dir variable is set to the destination directory where the backup will be stored.
+The timestamp variable is generated using the date command to create a unique name for the backup file.
+The backup_file variable concatenates the backup_dir, "backup_", and the timestamp to create the backup file path.
+The tar command is used to create a compressed archive (tar.gz) of the source directory.
+The backup file is saved in the specified backup_dir with the generated timestamp in the file name.
+The script checks the exit status of the tar command using $? and prints a success or failure message accordingly.
+Note: Make sure to replace /path/to/source and /path/to/backup with the actual paths of your source and backup directories.
+
+Remember to make the script executable using the command chmod +x backup_script.sh before running it.
+
+This script provides a basic example of creating a file backup using the tar command. 
+You can modify it according to your specific backup requirements, 
+such as including multiple directories, excluding certain files, 
+or implementing additional error handling and logging mechanisms.

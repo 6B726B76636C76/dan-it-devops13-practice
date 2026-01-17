@@ -1,0 +1,12 @@
+Explanation:
+
+The script starts with the shebang line (#!/bin/bash) to specify the interpreter.
+The cpu_usage variable uses the top command to retrieve the CPU usage percentage.
+The memory_usage variable uses the free command to calculate the memory usage percentage.
+The disk_usage variable uses the df command to retrieve the disk usage percentage of the root filesystem ("/").
+The ping command is used to check network connectivity to google.com with a count of 3 pings. The output is redirected to /dev/null to suppress it.
+The script checks the exit status of the ping command using $? and prints the network connectivity status accordingly.
+Note: You can modify the script to include additional system monitoring checks based on your requirements. 
+For example, you can check CPU load averages, disk space usage for specific directories, network interface statistics, or any other system metric of interest.
+
+Remember to make the script executable using the command chmod +x system_monitor.sh before running it.

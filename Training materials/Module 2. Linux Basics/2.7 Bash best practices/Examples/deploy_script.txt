@@ -1,0 +1,13 @@
+Explanation:
+
+The script starts with the shebang line (#!/bin/bash) to specify the interpreter.
+The target_dir variable is set to the directory where you want to deploy the files. Replace /path/to/deploy with the actual target directory.
+The source_dir variable is set to the directory where the files to be deployed are located. Replace /path/to/source with the actual source directory.
+The cp command is used to recursively copy (-r) the files from the source directory to the target directory.
+The script checks the exit status of the cp command using $? and prints a success or failure message accordingly.
+Note: Make sure to replace /path/to/deploy and /path/to/source with the actual paths of your target and source directories.
+
+Remember to make the script executable using the command chmod +x deploy_script.sh before running it.
+
+This script provides a basic example of an automated deployment script. You can modify it according to your specific deployment requirements, 
+such as including additional checks, logging, or handling different file types and directories.
