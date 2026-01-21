@@ -1,0 +1,67 @@
+Vagrant.configure("2") do |config|
+
+  config.vm.box = "ubuntu/jammy64"
+
+  config.vm.network "public_network", dev:"wlo1"
+
+  config.vm.provider "virtualbox" do |vb|
+    vb.memory = 2048
+    vb.cpus   = 2
+  end
+
+  config.vm.provision "shell", inline: <<-SHELL
+    apt-get update
+    apt-get upgrade -y
+    apt autoremove --purge -y
+    apt-get install nginx -y
+    sed -i 's/80/82/g' /etc/nginx/sites-available/default
+
+
+    
+    cat << 'EOF' > /var/www/html/index.html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Hello!</title>
+<style>
+body {
+margin: 0;
+height: 100vh;
+display: flex;
+justify-content: center;
+align-items: center;
+background-color: #f4f6f8;
+font-family: Arial, Helvetica, sans-serif;
+}
+.container {
+text-align: center;
+padding: 40px;
+background: #ffffff;
+border-radius: 12px;
+box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+h1 {
+margin-bottom: 10px;
+color: #333;
+}
+p {
+color: #666;
+font-size: 18px;
+}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>Добро пожаловать!</h1>
+<p>Эта страница успешно загружена.</p>
+</div>
+</body>
+</html>
+EOF
+
+    systemctl restart nginx
+    systemctl enable nginx
+
+  SHELL
+end
