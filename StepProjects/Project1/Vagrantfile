@@ -1,0 +1,89 @@
+
+Vagrant.configure("2") do |config|
+
+  config.vm.box = "ubuntu/jammy64"
+  config.vm.box_version = "20241002.0.0"
+  config.vm.box_check_update = true
+  config.ssh.insert_key = false
+  config.vm.synced_folder ".", "/vagrant", disabled: false
+  config.vm.boot_timeout = 600
+  config.vm.graceful_halt_timeout = 300
+
+  #APP VM ENVs
+  VM_APP_IP              = ENV.fetch('VM_APP_IP')               { raise "VM_APP_IP env variable is required!" }
+  VM_APP_RAM             = Integer(ENV.fetch('VM_APP_RAM')      { raise "VM_APP_RAM env variable is required!" })
+  VM_APP_CPUS            = Integer(ENV.fetch('VM_APP_CPUS')     { raise "VM_APP_CPUS env variable is required!" })
+  APP_USER               = ENV.fetch('APP_USER')                { raise "APP_USER env variable is required!" }
+  APP_USER_PASSWD        = ENV.fetch('APP_USER_PASSWD')         { raise "APP_USER_PASSWD env variable is required!" }
+  REPO_URI               = ENV.fetch('REPO_URI')                { raise "REPO_URI env variable is required!" }
+  APP_DIR                = ENV.fetch('APP_DIR')                 { raise "APP_DIR env variable is required!" }
+  APP_PROJECT_DIR        = ENV.fetch('APP_PROJECT_DIR')         { raise "APP_PROJECT_DIR env variable is required!" }
+
+  NETWORK                = ENV.fetch('NETWORK')                 { raise "NETWORK env variable is required!" }
+
+  #DB VM ENVs
+  VM_DB_IP               = ENV.fetch('VM_DB_IP')                { raise "VM_DB_IP env variable is required!" }
+  VM_DB_RAM              = Integer(ENV.fetch('VM_DB_RAM')       { raise "VM_DB_RAM env variable is required!" })
+  VM_DB_CPUS             = Integer(ENV.fetch('VM_DB_CPUS')      { raise "VM_DB_CPUS env variable is required!" })
+  DB_USER                = ENV.fetch('DB_USER')                 { raise "DB_USER env variable is required!" }
+  DB_PASS                = ENV.fetch('DB_PASS')                 { raise "DB_PASS env variable is required!" }
+  DB_NAME                = ENV.fetch('DB_NAME')                 { raise "DB_NAME env variable is required!" }
+
+
+  config.vm.define "app" do |app_vm|
+    app_vm.vm.hostname = "appvm"
+    app_vm.vm.network "private_network", ip: VM_APP_IP, netmask: "255.255.255.0"
+
+    app_vm.vm.provider "virtualbox" do |vb|
+      vb.gui    = false
+      vb.name   = "app_virtual_machine"
+      vb.memory = VM_APP_RAM
+      vb.cpus   = VM_APP_CPUS
+      vb.customize ["modifyvm", :id, "--ioapic", "on"]
+      vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+    end
+
+    app_vm.vm.provision "shell",
+      env: {
+        "APP_USER" => APP_USER,
+        "APP_USER_PASSWD" => APP_USER_PASSWD,
+        "APP_DIR" => APP_DIR,
+        "APP_PROJECT_DIR" => APP_PROJECT_DIR,
+        "DB_NAME" => DB_NAME,
+        "DB_USER" => DB_USER,
+        "DB_PASS" => DB_PASS,
+        "REPO_URI" => REPO_URI
+      },
+      path: "app_configure.sh",
+      privileged: true
+  end
+
+  config.vm.define "db" do |db_vm|
+
+    db_vm.vm.hostname = "dbvm"
+    db_vm.vm.network "private_network", ip: VM_DB_IP, netmask: "255.255.255.0"
+
+    db_vm.vm.provider "virtualbox" do |vb|
+      vb.gui    = false
+      vb.name   = "db_virtual_machine"
+      vb.memory = VM_DB_RAM
+      vb.cpus   = VM_DB_CPUS
+      vb.customize ["modifyvm", :id, "--ioapic", "on"]
+      vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+    end
+
+    db_vm.vm.provision "shell",
+      env: {
+        "DB_NAME" => DB_NAME,
+        "DB_USER" => DB_USER,
+        "DB_PASS" => DB_PASS,
+        "NETWORK" => NETWORK
+      },
+      path: "db_configure.sh",
+      privileged: true
+  end
+
+  config.trigger.after :up do |trigger|
+    trigger.info = "Done!"
+  end
+end
