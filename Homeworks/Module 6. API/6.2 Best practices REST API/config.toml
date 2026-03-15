@@ -1,0 +1,7 @@
+[app_auth_tokens]
+redis_user="tZWiFQjI6bFwcxi0"
+redis_passwd="31WuSqQGkzCZnHTeu1P39laHhQiuLP9p"
+redis_host="redis"
+redis_port=6379
+local_db_file_path="./students.csv"
+redis_db_name=0

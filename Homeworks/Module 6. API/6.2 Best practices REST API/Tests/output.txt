@@ -1,0 +1,307 @@
+Отримати всіх наявних студентів (GET)
+[
+  {
+    "age": 29,
+    "id": 2,
+    "last_name": "Darkholme",
+    "name": "Van"
+  },
+  {
+    "age": 25,
+    "id": 3,
+    "last_name": "3_new_student_3",
+    "name": "3_new_student_3"
+  },
+  {
+    "age": 50,
+    "id": 4,
+    "last_name": "Lee",
+    "name": "Danny"
+  },
+  {
+    "age": 24,
+    "id": 7,
+    "last_name": "aboba",
+    "name": "boba"
+  },
+  {
+    "age": 18,
+    "id": 8,
+    "last_name": "1_student",
+    "name": "1_student"
+  },
+  {
+    "age": 16,
+    "id": 9,
+    "last_name": "2_student",
+    "name": "2_student"
+  },
+  {
+    "age": 15,
+    "id": 10,
+    "last_name": "3_student",
+    "name": "3_student"
+  }
+]
+
+##############################
+Створити трьох студентів (POST).
+{
+  "age": 35,
+  "id": 11,
+  "last_name": "1_student",
+  "name": "1_student"
+}
+
+{
+  "age": 28,
+  "id": 12,
+  "last_name": "2_student",
+  "name": "2_student"
+}
+
+{
+  "age": 18,
+  "id": 13,
+  "last_name": "3_student",
+  "name": "3_student"
+}
+
+##############################
+Отримати інформацію про всіх наявних студентів (GET).
+[
+  {
+    "age": 29,
+    "id": 2,
+    "last_name": "Darkholme",
+    "name": "Van"
+  },
+  {
+    "age": 25,
+    "id": 3,
+    "last_name": "3_new_student_3",
+    "name": "3_new_student_3"
+  },
+  {
+    "age": 50,
+    "id": 4,
+    "last_name": "Lee",
+    "name": "Danny"
+  },
+  {
+    "age": 24,
+    "id": 7,
+    "last_name": "aboba",
+    "name": "boba"
+  },
+  {
+    "age": 18,
+    "id": 8,
+    "last_name": "1_student",
+    "name": "1_student"
+  },
+  {
+    "age": 16,
+    "id": 9,
+    "last_name": "2_student",
+    "name": "2_student"
+  },
+  {
+    "age": 15,
+    "id": 10,
+    "last_name": "3_student",
+    "name": "3_student"
+  },
+  {
+    "age": 35,
+    "id": 11,
+    "last_name": "1_student",
+    "name": "1_student"
+  },
+  {
+    "age": 28,
+    "id": 12,
+    "last_name": "2_student",
+    "name": "2_student"
+  },
+  {
+    "age": 18,
+    "id": 13,
+    "last_name": "3_student",
+    "name": "3_student"
+  }
+]
+
+##############################
+Оновити вік другого студента (PATCH).
+{
+  "age": 19,
+  "id": 2,
+  "last_name": "Darkholme",
+  "name": "Van"
+}
+
+##############################
+Отримати інформацію про другого студента (GET).
+{
+  "age": 19,
+  "id": 2,
+  "last_name": "Darkholme",
+  "name": "Van"
+}
+
+##############################
+Оновити імʼя, прізвище та вік третього студента (PUT).
+{
+  "age": 21,
+  "id": 3,
+  "last_name": "3_new_student_3",
+  "name": "3_new_student_3"
+}
+
+##############################
+Отримати інформацію про третього студента (GET).
+{
+  "age": 21,
+  "id": 3,
+  "last_name": "3_new_student_3",
+  "name": "3_new_student_3"
+}
+
+##############################
+Отримати всіх наявних студентів (GET).
+[
+  {
+    "age": 19,
+    "id": 2,
+    "last_name": "Darkholme",
+    "name": "Van"
+  },
+  {
+    "age": 21,
+    "id": 3,
+    "last_name": "3_new_student_3",
+    "name": "3_new_student_3"
+  },
+  {
+    "age": 50,
+    "id": 4,
+    "last_name": "Lee",
+    "name": "Danny"
+  },
+  {
+    "age": 24,
+    "id": 7,
+    "last_name": "aboba",
+    "name": "boba"
+  },
+  {
+    "age": 18,
+    "id": 8,
+    "last_name": "1_student",
+    "name": "1_student"
+  },
+  {
+    "age": 16,
+    "id": 9,
+    "last_name": "2_student",
+    "name": "2_student"
+  },
+  {
+    "age": 15,
+    "id": 10,
+    "last_name": "3_student",
+    "name": "3_student"
+  },
+  {
+    "age": 35,
+    "id": 11,
+    "last_name": "1_student",
+    "name": "1_student"
+  },
+  {
+    "age": 28,
+    "id": 12,
+    "last_name": "2_student",
+    "name": "2_student"
+  },
+  {
+    "age": 18,
+    "id": 13,
+    "last_name": "3_student",
+    "name": "3_student"
+  }
+]
+
+##############################
+Видалити першого користувача (DELETE).
+{
+  "error": "Student with id 1 not found"
+}
+
+##############################
+Отримати всіх наявних студентів (GET).
+[
+  {
+    "age": 19,
+    "id": 2,
+    "last_name": "Darkholme",
+    "name": "Van"
+  },
+  {
+    "age": 21,
+    "id": 3,
+    "last_name": "3_new_student_3",
+    "name": "3_new_student_3"
+  },
+  {
+    "age": 50,
+    "id": 4,
+    "last_name": "Lee",
+    "name": "Danny"
+  },
+  {
+    "age": 24,
+    "id": 7,
+    "last_name": "aboba",
+    "name": "boba"
+  },
+  {
+    "age": 18,
+    "id": 8,
+    "last_name": "1_student",
+    "name": "1_student"
+  },
+  {
+    "age": 16,
+    "id": 9,
+    "last_name": "2_student",
+    "name": "2_student"
+  },
+  {
+    "age": 15,
+    "id": 10,
+    "last_name": "3_student",
+    "name": "3_student"
+  },
+  {
+    "age": 35,
+    "id": 11,
+    "last_name": "1_student",
+    "name": "1_student"
+  },
+  {
+    "age": 28,
+    "id": 12,
+    "last_name": "2_student",
+    "name": "2_student"
+  },
+  {
+    "age": 18,
+    "id": 13,
+    "last_name": "3_student",
+    "name": "3_student"
+  }
+]
+
+##############################
