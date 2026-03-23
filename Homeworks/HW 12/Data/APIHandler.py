@@ -2,18 +2,16 @@ import json
 import asyncio
 from functools import wraps
 from typing import Type, TypeVar
-from flask import jsonify, request
+
+from flask import jsonify
 from Logger.AppLogger import api_logger, app_event_logger
-from Data.ConfigReader import config_reader
-from Data.RedisHandler import RedisData
 from Data.CSVHandler import StudentRepository
 from Data.DataModels.StudentModel import APIDataStudent, APIDataStudentAge, Student
 
 T = TypeVar("T")
 
-cfg_file = config_reader()
-redis = RedisData(cfg_file)
-csv_data = StudentRepository(cfg_file.local_db_file_path)
+db_path = "./students.csv"
+csv_data = StudentRepository(db_path)
 
 def deserialize_json(json_data: str | dict, response_data_model: Type[T]) -> T | None:
     try:
@@ -29,40 +27,6 @@ def deserialize_json(json_data: str | dict, response_data_model: Type[T]) -> T |
         app_event_logger.error(f"Deserialization error: {e}")
         return None
     
-def start_background_loop():
-    app_event_logger.debug("Starting Redis background task...")
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.create_task(redis.redis_cache_worker())
-    loop.run_forever()
-
-def bearer_token_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        api_logger.debug("Checking authorization token...")
-        
-        if 'Authorization' not in request.headers:
-            api_logger.warning("Authorization header missing")
-            return jsonify({'error': 'Unauthorized'}), 401
-        
-        auth_header = request.headers['Authorization']
-        
-        if not auth_header.startswith('Bearer '):
-            api_logger.warning("Invalid authorization header format")
-            return jsonify({'error': 'Unauthorized'}), 401
-        
-        token = auth_header.split(' ')[1]
-        api_logger.debug(f"Token received: {token[:5]}...")
-        
-        auth_result = redis.verify_token(token)
-        if not auth_result:
-            api_logger.warning(f"Invalid token: {token}...")
-            return jsonify({'error': 'Incorrect token'}), 401
-        
-        api_logger.debug("Token verified successfully")
-        return f(*args, **kwargs)
-    
-    return decorated
 
 def get_student_info_by_id(id: int):
     api_logger.debug(f"Getting student data with id {id}")
