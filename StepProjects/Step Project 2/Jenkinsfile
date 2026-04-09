@@ -1,0 +1,75 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE_NAME = "zinchevm/app-repo"
+        DOCKER_TAG        = "${BUILD_NUMBER}"
+        FULL_IMAGE        = "${DOCKER_IMAGE_NAME}:${DOCKER_TAG}"
+
+        GITHUB_CREDENTIALS   = 'github-token'
+        DOCKER_HUB_CREDENTIALS = 'dockerhub-token'
+    }
+
+    options {
+        timeout(time: 5, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '5'))
+        disableConcurrentBuilds()
+    }
+
+    stages {
+        stage('Pull') {
+            steps {
+                git branch: "${env.BRANCH_NAME}",
+                    credentialsId: "${GITHUB_CREDENTIALS}",
+                    url: 'https://github.com/6B726B76636C76/app-repo.git'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                script {
+                    docker.build("${FULL_IMAGE}")
+                }
+            }
+        }
+
+        stage('test') {
+            steps {
+                sh '''
+                    docker run --rm \
+                        -v ${WORKSPACE}:/app \
+                        -w /app \
+                        -e CI=true \
+                        --entrypoint "" \
+                        ${FULL_IMAGE} \
+                        sh -c "npm install && npm test -- --ci --coverage"
+                '''
+            }
+        }
+
+        stage('push') {
+            when {
+                expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
+            }
+            steps {
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-token') {
+                        docker.image("${FULL_IMAGE}").push()
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            echo 'Pipeline finished successfully!'
+        }
+        failure {
+            echo 'Pipeline error'
+        }
+    }
+}
