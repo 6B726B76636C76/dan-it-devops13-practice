@@ -1,0 +1,41 @@
+Vagrant.configure("2") do |config|
+  config.vm.box = "debian/bookworm64"
+
+  #Jenkins server
+  config.vm.define "jenkins_server" do |jenkins_server|
+    jenkins_server.vm.hostname = "jenkins-server"
+    jenkins_server.vm.network "private_network", ip: "10.0.0.2", virtualbox__intnet: "client-net"
+    jenkins_server.vm.network "forwarded_port", guest: 8080, host: 8080
+    jenkins_server.vm.provider "virtualbox" do |vb|
+      vb.name   = "Jenkins server"
+      vb.memory = 2048
+      vb.cpus   = 2
+    end
+
+    jenkins_server.vm.synced_folder "../jenkins_server_data", "/home/vagrant/jenkins_data"
+
+    jenkins_server.vm.provision "shell", path: "../scripts/update-system.sh"
+    jenkins_server.vm.provision "shell", path: "../scripts/docker-install.sh"
+    jenkins_server.vm.provision "shell", path: "../scripts/jenkins-server-installer.sh"
+  end
+
+  #Jenkins worker
+  config.vm.define "jenkins_worker" do |jenkins_worker|
+    jenkins_worker.vm.hostname = "jenkins-worker"
+    jenkins_worker.vm.network "private_network", ip: "10.0.0.10", virtualbox__intnet: "client-net"
+    jenkins_worker.vm.provider "virtualbox" do |vb|
+      vb.name   = "Jenkins worker"
+      vb.memory = 1024
+      vb.cpus   = 2
+    end
+
+    jenkins_worker.vm.provision "file", 
+      source: "../scripts/jenkins_worker_initialize/jenkins-worker-service-installer.sh",
+      destination: "/home/vagrant/jenkins-worker-service-installer.sh"
+
+    jenkins_worker.vm.provision "shell", path: "../scripts/update-system.sh" 
+    jenkins_worker.vm.provision "shell", path: "../scripts/docker-install.sh"
+    jenkins_worker.vm.provision "shell", path: "../scripts/jenkins-worker-installer.sh"
+  end
+
+end
