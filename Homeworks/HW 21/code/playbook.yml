@@ -1,0 +1,42 @@
+- name: Install Docker, Docker Compose
+  hosts: web
+  gather_facts: true
+  become: true
+
+  tasks:
+    - name: Update and upgrade apt packages
+      ansible.builtin.apt:
+        upgrade: true
+        update_cache: true
+        cache_valid_time: 86400
+
+    - name: Add the Docker repository and install
+      ansible.builtin.script: "../code/host_data/docker_install.sh"
+      args:
+        creates: /usr/bin/docker
+
+    - name: Start Docker Daemon
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+
+- name: Run NGINX in Docker
+  hosts: web
+  gather_facts: true
+  become: true
+
+  tasks:
+    - name: Copy the Docker Compose file
+      ansible.builtin.copy:
+        src: "host_data/docker-compose.yml"
+        dest: "/home/{{ ansible_user }}/docker-compose.yml"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Start the Docker container with NGINX
+      community.docker.docker_compose_v2:
+        project_src: "/home/{{ ansible_user }}"
+        state: present
