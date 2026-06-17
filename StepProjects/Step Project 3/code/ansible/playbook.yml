@@ -1,0 +1,225 @@
+# ansible-vault edit group_vars/jenkins_worker/vault.yml
+# ansible-vault view group_vars/jenkins_worker/vault.yml
+
+- name: Setting up the system
+  hosts: jenkins_server, jenkins_worker
+  gather_facts: true
+  become: true
+  tags:
+    - system
+
+  vars:
+    jenkins_folder: "/home/{{ ansible_user }}/jenkins"
+
+  tasks:
+
+    - name: Update and upgrade apt packages
+      ansible.builtin.apt:
+        upgrade: true
+        update_cache: true
+
+    - name: Install Python Docker SDK
+      ansible.builtin.apt:
+        name: python3-docker
+        state: present
+
+    - name: Create Jenkins folder on server
+      ansible.builtin.file:
+        path: "{{ jenkins_folder }}"
+        state: directory
+        owner: admin
+        group: admin
+        mode: '0750'
+
+    - name: Create keyrings directory
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Install required dependencies
+      ansible.builtin.apt:
+        name:
+          - net-tools
+          - wget
+          - ca-certificates
+          - curl
+        state: present
+
+    - name: Download Docker GPG key
+      ansible.builtin.shell:
+        cmd: curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+        creates: /etc/apt/keyrings/docker.asc
+      tags: skip_ansible_lint
+
+    - name: Add Docker apt repository
+      ansible.builtin.deb822_repository:
+        name: docker
+        types: deb
+        uris: https://download.docker.com/linux/debian
+        suites: "{{ ansible_distribution_release }}"
+        components: stable
+        architectures: "{{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }}"
+        signed_by: /etc/apt/keyrings/docker.asc
+        state: present
+
+    - name: Update packages when the Docker apt repository has been added
+      ansible.builtin.apt:
+        upgrade: true
+        update_cache: true
+
+    - name: Install Docker
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+
+    - name: Start Docker Daemon
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+- name: Install Jenkins server
+  hosts: jenkins_server
+  gather_facts: true
+  become: true
+  tags:
+    - jenkins_server
+
+  vars:
+    jenkins_folder: "/home/{{ ansible_user }}/jenkins"
+
+  tasks:
+
+    - name: Copy nginx.conf to Jenkins server
+      ansible.builtin.copy:
+        src: ../../configuration/jenkins_server_data/nginx.conf
+        dest: "{{ jenkins_folder }}/nginx.conf"
+        owner: admin
+        group: admin
+        mode: '0644'
+
+    - name: Copy docker-compose.yml to Jenkins server
+      ansible.builtin.copy:
+        src: ../../configuration/jenkins_server_data/docker-compose.yml
+        dest: "{{ jenkins_folder }}/docker-compose.yml"
+        owner: admin
+        group: admin
+        mode: '0644'
+
+    - name: Copy JCasC config
+      ansible.builtin.copy:
+        src: ../../configuration/jenkins_server_data/jenkins.yaml
+        dest: "{{ jenkins_folder }}/jenkins.yaml"
+        owner: admin
+        group: admin
+        mode: '0644'
+
+    - name: Copy SSH private key to Jenkins server
+      ansible.builtin.copy:
+        content: "{{ ssh_private_key }}"
+        dest: /home/admin/jenkins/ssh_private_key
+        owner: admin
+        group: admin
+        mode: '0600'
+
+    - name: Create .env file from vault
+      ansible.builtin.copy:
+        content: |
+          SSH_KEY_PATH=/run/secrets/ssh_private_key
+        dest: /home/admin/jenkins/.env
+        owner: admin
+        group: admin
+        mode: '0600'
+
+    - name: Copy Dockerfile to Jenkins server
+      ansible.builtin.copy:
+        src: ../../configuration/jenkins_server_data/Dockerfile
+        dest: "{{ jenkins_folder }}/Dockerfile"
+        owner: admin
+        group: admin
+        mode: '0644'
+
+    - name: Copy plugins.txt to Jenkins server
+      ansible.builtin.copy:
+        src: ../../configuration/jenkins_server_data/plugins.txt
+        dest: "{{ jenkins_folder }}/plugins.txt"
+        owner: admin
+        group: admin
+        mode: '0644'
+
+    - name: Start Jenkins via docker compose
+      community.docker.docker_compose_v2:
+        project_src: "{{ jenkins_folder }}"
+        state: present
+
+    - name: Wait for Jenkins to start
+      ansible.builtin.uri:
+        url: "http://localhost:80"
+        status_code: 200
+      register: result
+      until: result.status == 200
+      retries: 15
+      delay: 60
+
+- name: Configure Jenkins worker agent
+  hosts: jenkins_worker
+  become: true
+  tags:
+    - jenkins_worker
+
+  vars:
+    jenkins_folder: "/home/{{ ansible_user }}/jenkins"
+
+
+  tasks:
+
+    - name: Install required dependencies
+      ansible.builtin.apt:
+        name:
+          - fontconfig
+          - default-jdk
+          - netcat-openbsd
+        state: present
+        update_cache: true
+
+    - name: Create Jenkins folder
+      ansible.builtin.file:
+        path: "{{ jenkins_folder }}"
+        state: directory
+        owner: admin
+        group: admin
+        mode: '0750'
+
+    - name: Download agent.jar
+      ansible.builtin.get_url:
+        url: "{{ jenkins_server }}/jnlpJars/agent.jar"
+        dest: "{{ jenkins_folder }}/agent.jar"
+        owner: admin
+        group: admin
+        mode: '0644'
+
+    - name: Create jenkins-worker systemd service
+      ansible.builtin.template:
+        src: ../../configuration/jenkins_worker_data/jenkins-worker.service.j2
+        dest: /etc/systemd/system/jenkins-worker.service
+        mode: '0644'
+        owner: root
+        group: root
+        force: true
+      register: service_template
+
+    - name: Reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+    - name: Enable and start jenkins-worker
+      ansible.builtin.systemd:
+        name: jenkins-worker
+        enabled: true
+        state: restarted

@@ -1,0 +1,25 @@
+[Unit]
+Description=Jenkins Worker Agent
+After=network.target docker.target
+
+[Service]
+Type=simple
+User=admin
+Group=docker
+WorkingDirectory={{ jenkins_folder }}
+
+Environment="JENKINS_URL={{ jenkins_server }}"
+Environment="JENKINS_SECRET={{ jenkins_secret }}"
+Environment="JENKINS_AGENT_NAME={{ jenkins_agent_id | default(inventory_hostname) }}"
+
+ExecStartPre=/bin/bash -c 'until nc -z {{ hostvars[groups["jenkins_server"][0]]["jenkins_private_ip"] }} 80; do sleep 3; done'
+ExecStart=/usr/bin/java -jar {{ jenkins_folder }}/agent.jar -url ${JENKINS_URL} -secret ${JENKINS_SECRET} -name ${JENKINS_AGENT_NAME} -workDir {{ jenkins_folder }}
+
+Restart=always
+RestartSec=10
+
+StandardOutput=append:/var/log/jenkins-worker.log
+StandardError=append:/var/log/jenkins-worker.log
+
+[Install]
+WantedBy=multi-user.target

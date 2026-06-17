@@ -1,0 +1,25 @@
+jenkins:
+  systemMessage: "Jenkins configured by JCasC"
+  numExecutors: 0
+  
+  nodes:
+    - permanent:
+        name: "jenkins-worker"
+        remoteFS: "/home/admin/jenkins"
+        numExecutors: 2
+        launcher:
+          jnlp:
+            workDirSettings:
+              disabled: false
+              workDirPath: "/home/admin/jenkins"
+
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          - basicSSHUserPrivateKey:
+              id: "ssh-key"
+              username: "admin"
+              privateKeySource:
+                directEntry:
+                  privateKey: "${SSH_PRIVATE_KEY}"
