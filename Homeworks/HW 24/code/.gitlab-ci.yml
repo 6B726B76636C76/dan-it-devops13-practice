@@ -1,0 +1,83 @@
+image: docker:latest
+
+stages:
+  - build
+  - scan
+  - push
+  - deploy
+
+variables:
+  IMAGE_REPO: "${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}"
+  IMAGE_TAG: "${CI_COMMIT_SHORT_SHA}"
+  FULL_IMAGE: "${IMAGE_REPO}:${IMAGE_TAG}"
+  LATEST_IMAGE: "${IMAGE_REPO}:latest"
+
+
+build-image:
+  stage: build
+  tags: [gitlab-runner]
+  script:
+    - docker build -t $FULL_IMAGE .
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
+
+trivy-scan:
+  stage: scan
+  tags: [gitlab-runner]
+  script:
+    - docker run --rm -v /var/run/docker.sock:/var/run/docker.sock
+        aquasec/trivy:latest image --ignore-unfixed --exit-code 1 --severity CRITICAL $FULL_IMAGE
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
+
+push-image:
+  stage: push
+  tags: [gitlab-runner]
+  before_script:
+    - echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+  script:
+    - docker push $FULL_IMAGE
+    - |
+      if [ "$CI_COMMIT_BRANCH" == "main" ]; then
+        docker tag $FULL_IMAGE $LATEST_IMAGE
+        docker push $LATEST_IMAGE
+      fi
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
+
+deploy-staging:
+  stage: deploy
+  tags: [gitlab-runner]
+  image:
+    name: alpine/k8s:1.30.2
+    entrypoint: [""]
+  before_script:
+    - mkdir -p ~/.kube
+    - echo "$KUBECONFIG_STAGING" | base64 -d > ~/.kube/config
+  script:
+    - cd k8s/overlays/staging
+    - kustomize edit set image placeholder=$FULL_IMAGE
+    - kubectl apply -k .
+  environment:
+    name: staging
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+
+deploy-prod:
+  stage: deploy
+  tags: [gitlab-runner]
+  image:
+    name: alpine/k8s:1.30.2
+    entrypoint: [""]
+  before_script:
+    - mkdir -p ~/.kube
+    - echo "$KUBECONFIG_PROD" | base64 -d > ~/.kube/config
+  script:
+    - cd k8s/overlays/prod
+    - kustomize edit set image placeholder=$FULL_IMAGE
+    - kubectl apply -k .
+  environment:
+    name: production
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
