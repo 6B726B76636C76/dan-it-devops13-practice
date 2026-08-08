@@ -1,0 +1,31 @@
+groups:
+  - name: node-alerts
+    rules:
+      - alert: LowDiskSpace
+        expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}) * 100 < 40
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Free disk space less than 40% ({{ $labels.instance }}, {{ $labels.mountpoint }})"
+          description: "Free {{ printf \"%.2f\" $value }}% space on {{ $labels.mountpoint }}."
+
+      - alert: HighCpuUsage
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[1m])) * 100) > 80
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU load > 80% ({{ $labels.instance }})"
+          description: "Current CPU load: {{ printf \"%.2f\" $value }}%."
+
+  - name: target-alerts
+    rules:
+      - alert: TargetDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Target is not accessable: {{ $labels.job }} ({{ $labels.instance }})"
+          description: "Prometheus can't collect the metrics {{ $labels.instance }}."
