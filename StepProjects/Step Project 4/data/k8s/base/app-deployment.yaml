@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: step-project-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: step-project-app
+  template:
+    metadata:
+      labels:
+        app: step-project-app
+    spec:
+      containers:
+        - name: step-project-app
+          image: step-project-app:latest
+          ports:
+            - containerPort: 5000
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: mysql-secret

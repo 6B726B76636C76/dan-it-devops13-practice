@@ -1,0 +1,138 @@
+stages:
+  - test
+  - build
+  - deploy
+
+variables:
+  IMAGE_NAME: $DOCKERHUB_USER/$DOCKERHUB_REPO
+
+test:
+  stage: test
+  image: python:3.12-slim
+
+  variables:
+    MYSQL_ROOT_PASSWORD: $MYSQL_ROOT_PASSWORD
+    MYSQL_DATABASE: $MYSQL_DATABASE
+    MYSQL_USER: $MYSQL_USER
+    MYSQL_PASSWORD: $MYSQL_PASSWORD
+    DB_HOST: mysql
+    DB_USER: $MYSQL_USER
+    DB_PASSWORD: $MYSQL_PASSWORD
+    DB_NAME: $MYSQL_DATABASE
+
+  services:
+    - name: mysql:8.0.36
+      alias: mysql
+
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends default-libmysqlclient-dev build-essential default-mysql-client netcat-openbsd
+    - pip install --no-cache-dir -r src/app/requirements.txt
+    - echo "=== DNS ==="
+    - getent hosts mysql
+    - echo "=== TCP ==="
+    - nc -vz -w 5 mysql 3306
+    - echo "=== MYSQL ==="
+    - mysqladmin ping -h mysql -P 3306 -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" --protocol=tcp --skip-ssl
+    - echo "=== WAIT ==="
+    - timeout 120 sh -c 'until mysqladmin ping -h mysql -P 3306 -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" --protocol=tcp --skip-ssl; do sleep 2; done'
+
+  script:
+    - cd src/app
+    - python -m unittest discover -s tests
+
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
+
+
+build:
+  stage: build
+  image: docker:24
+
+  services:
+    - docker:24-dind
+
+  script:
+    - echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USER" --password-stdin
+    - docker build -f src/Dockerfile -t "$IMAGE_NAME:$CI_COMMIT_SHORT_SHA" .
+    - docker push "$IMAGE_NAME:$CI_COMMIT_SHORT_SHA"
+
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
+
+
+deploy_stage:
+  stage: deploy
+
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: [""]
+
+  environment: stage
+
+  before_script:
+    - mkdir -p ~/.kube
+    - echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
+    - curl -Lo kustomize.tar.gz https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.3/kustomize_v5.4.3_linux_amd64.tar.gz
+    - tar -xzf kustomize.tar.gz
+    - chmod +x kustomize
+    - export PATH="$CI_PROJECT_DIR:$PATH"
+
+  script:
+    - kubectl create namespace k8s-step-project-staging --dry-run=client -o yaml | kubectl apply -f -
+    - kubectl create secret generic mysql-secret
+      --namespace=k8s-step-project-staging
+      --from-literal=MYSQL_ROOT_PASSWORD="$MYSQL_ROOT_PASSWORD"
+      --from-literal=MYSQL_DATABASE="$MYSQL_DATABASE"
+      --from-literal=MYSQL_USER="$MYSQL_USER"
+      --from-literal=MYSQL_PASSWORD="$MYSQL_PASSWORD"
+      --from-literal=DB_USER="$MYSQL_USER"
+      --from-literal=DB_PASSWORD="$MYSQL_PASSWORD"
+      --dry-run=client -o yaml | kubectl apply -f -
+    - cd k8s/overlays/staging
+    - kustomize edit set image step-project-app="$IMAGE_NAME:$CI_COMMIT_SHORT_SHA"
+    - kubectl apply -k .
+    - kubectl rollout status statefulset/mysql -n k8s-step-project-staging
+    - kubectl rollout status deployment/step-project-app -n k8s-step-project-staging
+
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+
+
+deploy_prod:
+  stage: deploy
+
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: [""]
+
+  environment: prod
+
+  before_script:
+    - mkdir -p ~/.kube
+    - echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
+    - curl -Lo kustomize.tar.gz https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.3/kustomize_v5.4.3_linux_amd64.tar.gz
+    - tar -xzf kustomize.tar.gz
+    - chmod +x kustomize
+    - export PATH="$CI_PROJECT_DIR:$PATH"
+
+  script:
+    - kubectl create namespace k8s-step-project-prod --dry-run=client -o yaml | kubectl apply -f -
+    - kubectl create secret generic mysql-secret
+      --namespace=k8s-step-project-prod
+      --from-literal=MYSQL_ROOT_PASSWORD="$MYSQL_ROOT_PASSWORD"
+      --from-literal=MYSQL_DATABASE="$MYSQL_DATABASE"
+      --from-literal=MYSQL_USER="$MYSQL_USER"
+      --from-literal=MYSQL_PASSWORD="$MYSQL_PASSWORD"
+      --from-literal=DB_USER="$MYSQL_USER"
+      --from-literal=DB_PASSWORD="$MYSQL_PASSWORD"
+      --dry-run=client -o yaml | kubectl apply -f -
+    - cd k8s/overlays/prod
+    - kustomize edit set image step-project-app="$IMAGE_NAME:$CI_COMMIT_SHORT_SHA"
+    - kubectl apply -k .
+    - kubectl rollout status statefulset/mysql -n k8s-step-project-prod
+    - kubectl rollout status deployment/step-project-app -n k8s-step-project-prod
+
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+  when: manual
