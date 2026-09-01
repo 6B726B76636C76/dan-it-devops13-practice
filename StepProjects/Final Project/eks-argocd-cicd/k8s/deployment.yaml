@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-project-app
+  labels:
+    app: argocd-project-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: argocd-project-app
+  template:
+    metadata:
+      labels:
+        app: argocd-project-app
+    spec:
+      containers:
+        - name: argocd-project-app
+          image: zinchevm/argocd-project-app:latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 20
